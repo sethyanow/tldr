@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tl;dr — On-device summarization</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero" id="top">
+      <h1>tl;dr</h1>
+      <p>
+        Private, browser-native summarization. Load Hugging Face models locally,
+        summarize content quickly, and keep your history on-device.
+      </p>
+      <a class="btn ghost" href="#controls">Open control panel</a>
+    </header>
+
+    <main class="layout">
+      <section class="panel" id="controls" aria-labelledby="controls-title">
+        <h2 id="controls-title">Model controls</h2>
+        <p class="subtle">Choose a common model or enter a custom Hugging Face model ID.</p>
+
+        <form id="controlForm" onsubmit="return false;">
+          <div class="field-group">
+            <label for="presetModel">Common models</label>
+            <select id="presetModel">
+              <option value="" selected>Pick a model</option>
+              <option value="Xenova/distilbart-cnn-6-6">Xenova/distilbart-cnn-6-6 (fast)</option>
+              <option value="Xenova/bart-large-cnn">Xenova/bart-large-cnn (quality)</option>
+              <option value="Xenova/t5-small">Xenova/t5-small (lightweight)</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="customModel">Custom model ID</label>
+            <input id="customModel" type="text" placeholder="org/model-name" spellcheck="false" />
+          </div>
+
+          <div class="field-group">
+            <label for="hfApiKey">Hugging Face API key (optional)</label>
+            <input id="hfApiKey" type="password" autocomplete="off" placeholder="hf_..." spellcheck="false" />
+          </div>
+
+          <div class="controls-row">
+            <button id="loadModelBtn" class="btn" type="button">Download & load model</button>
+            <span id="modelStatus" role="status" aria-live="polite">No model loaded</span>
+          </div>
+
+          <hr />
+
+          <div class="field-group">
+            <label for="sourceText">Text to summarize</label>
+            <textarea id="sourceText" rows="8" placeholder="Paste article text, notes, or logs here..."></textarea>
+          </div>
+
+          <div class="controls-row">
+            <button id="summarizeBtn" class="btn" type="button">Summarize on-device</button>
+            <button id="saveBtn" class="btn ghost" type="button" disabled>Save result</button>
+          </div>
+          <p id="feedback" role="status" aria-live="polite" class="subtle"></p>
+        </form>
+      </section>
+
+      <section class="panel" id="results" aria-labelledby="results-title">
+        <h2 id="results-title">Summary output</h2>
+        <article id="summaryOutput" tabindex="0">Your summary will appear here.</article>
+      </section>
+
+      <section class="panel" id="history" aria-labelledby="history-title">
+        <h2 id="history-title">Saved summaries</h2>
+
+        <div class="field-group">
+          <label for="historySearch">Search saved summaries</label>
+          <input id="historySearch" type="text" list="historySuggestions" placeholder="Fuzzy search by title or content" />
+          <datalist id="historySuggestions"></datalist>
+        </div>
+
+        <nav aria-label="Saved summary navigation">
+          <ul id="historyList"></ul>
+        </nav>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
