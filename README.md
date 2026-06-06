@@ -4,7 +4,7 @@ Single Page Application for privacy-first, on-device summarization in the browse
 
 ## Run locally
 
-Serve `/tmp/workspace/sethyanow/tldr` with any static file server, for example:
+Serve the project directory with any static file server, for example:
 
 ```bash
 python -m http.server 4173

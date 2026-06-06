@@ -1,4 +1,8 @@
 const STORAGE_KEY = 'tldr.savedSummaries.v1';
+const MAX_SAVED_SUMMARIES = 200;
+const MAX_AUTOCOMPLETE_CHARS = 80;
+const FUZZY_BASE_MATCH_SCORE = 1;
+const FUZZY_MAX_PROXIMITY_BONUS = 3;
 
 const presetModel = document.getElementById('presetModel');
 const customModel = document.getElementById('customModel');
@@ -116,14 +120,15 @@ function saveCurrentSummary() {
   }
 
   const entry = {
-    id: crypto.randomUUID(),
+    id: createId(),
     createdAt: new Date().toISOString(),
     model: currentModel || 'unknown-model',
+    source: sourceText.value.trim(),
     sourcePreview: sourceText.value.trim().slice(0, 120),
     summary: currentSummary
   };
 
-  savedItems = [entry, ...savedItems].slice(0, 200);
+  savedItems = [entry, ...savedItems].slice(0, MAX_SAVED_SUMMARIES);
   persistSavedItems(savedItems);
   renderHistory(savedItems);
   setFeedback('Summary saved locally in your browser.');
@@ -154,7 +159,7 @@ function renderHistory(items) {
     button.textContent = `${new Date(item.createdAt).toLocaleString()} — ${item.model}`;
 
     button.addEventListener('click', () => {
-      sourceText.value = item.sourcePreview;
+      sourceText.value = item.source || item.sourcePreview || '';
       summaryOutput.textContent = item.summary;
       currentSummary = item.summary;
       saveBtn.disabled = false;
@@ -171,7 +176,7 @@ function renderSuggestions(items) {
 
   for (const item of items) {
     const option = document.createElement('option');
-    option.value = item.summary.slice(0, 80);
+    option.value = item.summary.slice(0, MAX_AUTOCOMPLETE_CHARS);
     historySuggestions.appendChild(option);
   }
 }
@@ -205,12 +210,15 @@ function fuzzyFind(items, query) {
 function fuzzyScore(text, pattern) {
   let ti = 0;
   let score = 0;
+  let previousMatchIndex = -1;
 
   for (let pi = 0; pi < pattern.length; pi++) {
     const ch = pattern[pi];
     ti = text.indexOf(ch, ti);
     if (ti === -1) return 0;
-    score += 1 + Math.max(0, 3 - Math.min(3, ti));
+    const gap = previousMatchIndex === -1 ? 0 : ti - previousMatchIndex - 1;
+    score += FUZZY_BASE_MATCH_SCORE + Math.max(0, FUZZY_MAX_PROXIMITY_BONUS - gap);
+    previousMatchIndex = ti;
     ti += 1;
   }
 
@@ -223,13 +231,36 @@ function setFeedback(message, isError = false) {
 }
 
 async function probeModelAccess(modelId, token) {
-  const response = await fetch(`https://huggingface.co/api/models/${encodeURIComponent(modelId)}`, {
-    headers: {
-      Authorization: 'Bearer ' + token
-    }
-  });
+  let response;
+  try {
+    response = await fetch(`https://huggingface.co/api/models/${encodeURIComponent(modelId)}`, {
+      headers: {
+        Authorization: 'Bearer ' + token
+      }
+    });
+  } catch {
+    throw new Error('Unable to verify model access right now. Please check your network and retry.');
+  }
 
   if (response.status === 401 || response.status === 403) {
     throw new Error('API key rejected for this model. Please verify access.');
   }
+
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`Model access check failed (${response.status}).`);
+  }
+}
+
+function createId() {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
